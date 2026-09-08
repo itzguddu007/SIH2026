@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Extreme Heatwave Early Warning System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">☀</div>
+        <div>
+          <h1>EXTREME <span>HEATWAVE</span></h1>
+          <h1>EARLY WARNING</h1>
+          <small>Human Thermal Stress Index</small>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav active">⌂ <span>Dashboard</span></button>
+        <button class="nav" onclick="focusMap()">◈ <span>Heat Risk Map</span></button>
+        <button class="nav" onclick="scrollToSection('forecast')">♨ <span>Forecast & Alerts</span></button>
+        <button class="nav" onclick="scrollToSection('calculator')">▦ <span>Human Risk Calculator</span></button>
+        <button class="nav" onclick="scrollToSection('history')">▥ <span>Historical Analysis</span></button>
+        <button class="nav" onclick="showToast('Health guidelines opened')">♥ <span>Health Guidelines</span></button>
+        <button class="nav" onclick="showToast('Prototype demonstration mode')">ⓘ <span>About System</span></button>
+      </nav>
+
+      <div class="legend">
+        <strong>Risk Level (Thermal Stress)</strong>
+        <div><i class="dot low"></i> Low <span>0–29</span></div>
+        <div><i class="dot moderate"></i> Moderate <span>30–49</span></div>
+        <div><i class="dot high"></i> High <span>50–79</span></div>
+        <div><i class="dot extreme"></i> Extreme <span>80–100</span></div>
+      </div>
+
+      <div class="sidebar-tip">
+        <div class="thermometer">🌡️</div>
+        <div><b>Heat is rising.</b><br><small>Stay safe, stay hydrated.</small></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input id="locationInput" placeholder="Search city or district..." value="Kolkata">
+          <button onclick="searchLocation()">⌕</button>
+        </div>
+        <button class="location-btn" onclick="selectKolkata()">⌖ Current Location</button>
+        <div class="top-right">
+          <button class="bell" onclick="scrollToSection('alert')">♧ <b>3</b></button>
+          <span id="clock"></span>
+        </div>
+      </header>
+
+      <section class="grid">
+        <div class="map-card card" id="mapCard">
+          <div class="card-title">
+            <div>
+              <h2>HEAT RISK MAP — INDIA</h2>
+              <small>Click a location or search for a city</small>
+            </div>
+            <span class="live">● LIVE</span>
+          </div>
+          <div id="map"></div>
+          <div class="map-overlay">
+            <span>Low</span>
+            <div class="gradient"></div>
+            <span>Extreme</span>
+          </div>
+        </div>
+
+        <div class="location-card card">
+          <div class="location-heading">
+            <div><span class="pin">●</span><h2 id="cityName">KOLKATA, WEST BENGAL</h2></div>
+            <button onclick="changeLocation()">Change Location</button>
+          </div>
+
+          <div class="weather">
+            <div class="temp">
+              <div class="weather-icon">🌤️</div>
+              <div><strong id="temp">39°C</strong><small>Partly Cloudy</small></div>
+            </div>
+            <div class="metric"><small>Feels Like</small><b id="feels">48°C</b></div>
+            <div class="metric"><small>Humidity</small><b id="humidity">74%</b></div>
+            <div class="metric"><small>Wind Speed</small><b id="wind">8 km/h</b></div>
+            <div class="metric"><small>UV Index</small><b id="uv">8 <em>(Very High)</em></b></div>
+          </div>
+
+          <div class="stress">
+            <div class="stress-head"><h3>THERMAL STRESS INDEX ⓘ</h3><span id="riskLabel">EXTREME RISK</span></div>
+            <div class="score"><strong id="stressScore">87</strong><span>/100</span></div>
+            <div class="bar"><i id="stressBar"></i></div>
+            <div class="scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+            <p>Health Impact: <b id="impact">Very high risk of heat exhaustion / heat stroke</b></p>
+          </div>
+        </div>
+
+        <div class="district-card card">
+          <div class="card-title"><h2>KOLKATA DISTRICT VIEW</h2><button onclick="focusKolkata()">⌖ Zoom to Kolkata</button></div>
+          <div class="district-body">
+            <div id="miniMap"></div>
+            <div class="district-list" id="districtList"></div>
+          </div>
+        </div>
+
+        <div class="forecast-card card" id="forecast">
+          <div class="card-title"><h2>TODAY'S FORECAST — KOLKATA</h2><button onclick="randomizeData()">↻ Refresh Demo Data</button></div>
+          <div class="forecast-row" id="forecastRow"></div>
+          <div class="forecast-legend">Thermal Stress Index:
+            <span class="low-dot"></span> Low (0–29)
+            <span class="mod-dot"></span> Moderate (30–49)
+            <span class="high-dot"></span> High (50–79)
+            <span class="ext-dot"></span> Extreme (80–100)
+          </div>
+        </div>
+
+        <div class="history-card card" id="history">
+          <div class="card-title"><h2>HISTORICAL HEAT STRESS TREND</h2><span>2021–2026</span></div>
+          <div class="chart" id="chart"></div>
+        </div>
+
+        <div class="calculator card" id="calculator">
+          <div class="card-title"><h2>HUMAN THERMAL STRESS CALCULATOR</h2></div>
+          <div class="calc-body">
+            <div class="form">
+              <label>Age <select id="age"><option value="22">22</option><option value="35">35</option><option value="50">50</option><option value="65" selected>65</option><option value="75">75</option></select></label>
+              <label>Occupation <select id="occupation"><option>Student</option><option>Office Worker</option><option selected>Outdoor Worker</option><option>Construction Worker</option><option>Athlete</option></select></label>
+              <label>Activity Level <select id="activity"><option>Low</option><option>Moderate</option><option selected>Heavy</option></select></label>
+              <label>Exposure Duration <select id="exposure"><option value="1">1 Hour</option><option value="2">2 Hours</option><option value="4" selected>4 Hours</option><option value="6">6 Hours</option></select></label>
+              <button class="calculate" onclick="calculateRisk()">Calculate My Risk</button>
+            </div>
+            <div class="personal-risk">
+              <small>PERSONALIZED RISK SCORE</small>
+              <div><strong id="personalScore">94</strong><span>/100</span></div>
+              <b class="risk-pill" id="personalLabel">EXTREME RISK</b>
+              <h4>Recommended Actions</h4>
+              <p>✓ Avoid outdoor work between 12 PM – 4 PM</p>
+              <p>✓ Take frequent water breaks</p>
+              <p>✓ Wear light, breathable clothing</p>
+              <p>✓ Stay hydrated and avoid direct sun</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="alert card" id="alert">
+          <div class="alert-icon">!</div>
+          <div><b>EARLY WARNING ALERT</b><span>Extreme thermal stress expected tomorrow between 1 PM – 4 PM in Kolkata.</span></div>
+          <strong id="probability">Risk Probability: 87%</strong>
+          <button onclick="showToast('Detailed warning opened')">View Details</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
