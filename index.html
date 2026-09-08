@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Extreme Heatwave Early Warning System</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">☀</div>
+        <div>
+          <h1>EXTREME <span>HEATWAVE</span></h1>
+          <h1>EARLY WARNING</h1>
+          <small>Human Thermal Stress Index · SIH 26083</small>
+        </div>
+      </div>
+
+      <nav>
+        <button class="nav active">⌂ <span>Dashboard</span></button>
+        <button class="nav" onclick="focusMap()">◈ <span>Heat Risk Map</span></button>
+        <button class="nav" onclick="scrollToSection('forecast')">♨ <span>Forecast &amp; Early Alerts</span></button>
+        <button class="nav" onclick="scrollToSection('calculator')">▦ <span>Human Risk Calculator</span></button>
+        <button class="nav" onclick="scrollToSection('history')">▥ <span>Seasonal Trend</span></button>
+        <button class="nav" onclick="scrollToSection('precautions')">♥ <span>Risk-Level Precautions</span></button>
+        <button class="nav" onclick="showToast('IMD 1°×1° gridded Tmax, 2025 · RH/wind/solar modeled from regional climatology · WBGT (Aus. BoM) + Heat Index (NOAA) + composite Mortality Risk Index')">ⓘ <span>About System</span></button>
+      </nav>
+
+      <div class="legend">
+        <strong>Risk Level (WBGT-based)</strong>
+        <div><i class="dot low"></i> Low <span>&lt;28°C</span></div>
+        <div><i class="dot moderate"></i> Moderate <span>28–30°C</span></div>
+        <div><i class="dot high"></i> High <span>30–32°C</span></div>
+        <div><i class="dot severe"></i> Severe <span>32–34°C</span></div>
+        <div><i class="dot extreme"></i> Extreme <span>&ge;34°C</span></div>
+      </div>
+
+      <div class="sidebar-tip">
+        <div class="thermometer">🌡️</div>
+        <div><b>Heat is rising.</b><br><small>Early warning saves lives.</small></div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div class="search">
+          <input id="locationInput" placeholder="Search any of 20 cities..." value="Kolkata">
+          <button onclick="searchLocation()">⌕</button>
+        </div>
+        <button class="location-btn" onclick="selectHighestRisk()">⌖ Highest Risk City</button>
+        <div class="top-right">
+          <button class="bell" onclick="scrollToSection('alert')">♧ <b id="bellCount">0</b></button>
+          <span id="clock"></span>
+        </div>
+      </header>
+
+      <div class="datebar">
+        <div class="dlabel">Simulated system date<br><b id="dateLabel">—</b></div>
+        <input type="range" id="daySlider" min="1" max="365" value="145">
+        <div class="dbtns">
+          <button id="prevBtn" title="Previous day">‹</button>
+          <button id="playBtn" class="play" title="Play">▶</button>
+          <button id="nextBtn" title="Next day">›</button>
+        </div>
+        <div class="dhint">Dataset: IMD gridded max-T, 2025 (day <span id="doyLabel">—</span>/365)</div>
+      </div>
+
+      <section class="grid">
+        <div class="map-card card" id="mapCard">
+          <div class="card-title">
+            <div>
+              <h2>HEAT RISK MAP — INDIA</h2>
+              <small>Click a city or search above · 20 cities from the gridded dataset</small>
+            </div>
+            <span class="live">● LIVE</span>
+          </div>
+          <div id="map"></div>
+          <div class="map-overlay">
+            <span>Low</span>
+            <div class="gradient"></div>
+            <span>Extreme</span>
+          </div>
+        </div>
+
+        <div class="location-card card">
+          <div class="location-heading">
+            <div><span class="pin">●</span><h2 id="cityName">KOLKATA, WEST BENGAL</h2></div>
+            <button onclick="changeLocation()">Change Location</button>
+          </div>
+
+          <div class="weather">
+            <div class="temp">
+              <div class="weather-icon">🌤️</div>
+              <div><strong id="temp">39°C</strong><small>Observed max temperature</small></div>
+            </div>
+            <div class="metric"><small>Feels Like (Heat Index)</small><b id="feels">48°C</b></div>
+            <div class="metric"><small>Humidity (modeled)</small><b id="humidity">74%</b></div>
+            <div class="metric"><small>Wind Speed (modeled)</small><b id="wind">8 km/h</b></div>
+            <div class="metric"><small>Solar Load (modeled)</small><b id="solar">950 W/m²</b></div>
+          </div>
+
+          <div class="stress">
+            <div class="stress-head"><h3>HUMAN THERMAL STRESS INDEX ⓘ</h3><span id="riskLabel">EXTREME RISK</span></div>
+            <div class="score"><strong id="stressScore">87</strong><span>/100</span></div>
+            <div class="bar"><i id="stressBar"></i></div>
+            <div class="scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
+            <p>WBGT (outdoor): <b id="wbgtVal">36°C</b> &nbsp;·&nbsp; Mortality Risk Index: <b id="mriVal">5.6</b> &nbsp;·&nbsp; Est. excess mortality: <b id="excessVal">+19%</b></p>
+          </div>
+        </div>
+
+        <div class="district-card card">
+          <div class="card-title"><h2 id="districtTitle">KOLKATA ZONE VIEW</h2><button onclick="focusSelectedCity()">⌖ Zoom In</button></div>
+          <div class="district-body">
+            <div id="miniMap"></div>
+            <div class="district-list" id="districtList"></div>
+          </div>
+        </div>
+
+        <div class="forecast-card card" id="forecast">
+          <div class="card-title"><h2 id="forecastTitle">5-DAY OUTLOOK — KOLKATA</h2><small>Same dataset, next 5 days from the simulated date — this is the early-warning lead window</small></div>
+          <div class="forecast-row" id="forecastRow"></div>
+          <div class="forecast-legend">Risk level:
+            <span class="low-dot"></span> Low
+            <span class="mod-dot"></span> Moderate
+            <span class="high-dot"></span> High
+            <span style="background:#ff3346;display:inline-block;width:8px;height:8px;border-radius:50%;margin-left:8px"></span> Severe
+            <span class="ext-dot"></span> Extreme
+          </div>
+        </div>
+
+        <div class="history-card card" id="history">
+          <div class="card-title"><h2 id="historyTitle">MONTHLY AVERAGE THERMAL STRESS — KOLKATA</h2><span>2025 (real Tmax basis)</span></div>
+          <div class="chart" id="chart"></div>
+        </div>
+
+        <div class="calculator card" id="calculator">
+          <div class="card-title"><h2>HUMAN THERMAL STRESS CALCULATOR</h2></div>
+          <div class="calc-body">
+            <div class="form">
+              <label>Age <select id="age"><option value="22">22</option><option value="35">35</option><option value="50">50</option><option value="65" selected>65</option><option value="75">75</option></select></label>
+              <label>Occupation <select id="occupation"><option>Student</option><option>Office Worker</option><option selected>Outdoor Worker</option><option>Construction Worker</option><option>Athlete</option></select></label>
+              <label>Activity Level <select id="activity"><option>Low</option><option>Moderate</option><option selected>Heavy</option></select></label>
+              <label>Exposure Duration <select id="exposure"><option value="1">1 Hour</option><option value="2">2 Hours</option><option value="4" selected>4 Hours</option><option value="6">6 Hours</option></select></label>
+              <button class="calculate" onclick="calculateRisk()">Calculate My Risk</button>
+            </div>
+            <div class="personal-risk">
+              <small>PERSONALIZED RISK SCORE (based on current city's WBGT)</small>
+              <div><strong id="personalScore">94</strong><span>/100</span></div>
+              <b class="risk-pill" id="personalLabel">EXTREME RISK</b>
+              <h4>Recommended Actions</h4>
+              <div id="personalActions"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="precaution-card card" id="precautions">
+          <div class="card-title">
+            <div><h2>STEPS &amp; PRECAUTIONS BY RISK LEVEL</h2><small>What individuals, vulnerable groups, and authorities should do at each level</small></div>
+          </div>
+          <div class="precaution-tabs" id="precautionTabs"></div>
+          <div class="precaution-body" id="precautionBody"></div>
+        </div>
+
+        <div class="alert card" id="alert">
+          <div class="alert-icon">!</div>
+          <div><b id="alertHeadline">EARLY WARNING ALERT</b><span id="alertBody">Scanning forecast window…</span></div>
+          <strong id="probability">Risk Probability: —</strong>
+          <button onclick="dispatchAlert()">Dispatch SMS/WhatsApp</button>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="data.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
