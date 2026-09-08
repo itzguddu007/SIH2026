@@ -1,0 +1,8 @@
+{
+  "temperature_weight": 0.20,
+  "humidity_weight": 0.15,
+  "wind_weight": 0.10,
+  "radiation_weight": 0.15,
+  "wbgt_weight": 0.20,
+  "utci_weight": 0.20
+}
