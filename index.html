@@ -49,9 +49,12 @@
 
     <main class="main">
       <header class="topbar">
-        <div class="search">
-          <input id="locationInput" placeholder="Search any of 20 cities..." value="Kolkata">
-          <button onclick="searchLocation()">⌕</button>
+        <div class="search-wrap">
+          <div class="search">
+            <input id="locationInput" placeholder="Search any of 20 cities..." value="Kolkata" autocomplete="off">
+            <button onclick="searchLocation()">⌕</button>
+          </div>
+          <div class="search-suggest" id="searchSuggest"></div>
         </div>
         <button class="location-btn" onclick="selectHighestRisk()">⌖ Highest Risk City</button>
         <div class="top-right">
@@ -62,7 +65,7 @@
 
       <div class="datebar">
         <div class="dlabel">Simulated system date<br><b id="dateLabel">—</b></div>
-        <input type="range" id="daySlider" min="1" max="365" value="145">
+        <input type="date" id="dateCalendar" min="2025-01-01" max="2025-12-31" value="2025-05-25">
         <div class="dbtns">
           <button id="prevBtn" title="Previous day">‹</button>
           <button id="playBtn" class="play" title="Play">▶</button>
@@ -104,6 +107,7 @@
             <div class="metric"><small>Wind Speed (modeled)</small><b id="wind">8 km/h</b></div>
             <div class="metric"><small>Solar Load (modeled)</small><b id="solar">950 W/m²</b></div>
           </div>
+          <small class="live-note" id="liveNote">Live weather loading…</small>
 
           <div class="stress">
             <div class="stress-head"><h3>HUMAN THERMAL STRESS INDEX ⓘ</h3><span id="riskLabel">EXTREME RISK</span></div>
@@ -111,6 +115,17 @@
             <div class="bar"><i id="stressBar"></i></div>
             <div class="scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
             <p>WBGT (outdoor): <b id="wbgtVal">36°C</b> &nbsp;·&nbsp; Mortality Risk Index: <b id="mriVal">5.6</b> &nbsp;·&nbsp; Est. excess mortality: <b id="excessVal">+19%</b></p>
+          </div>
+
+          <div class="impact" id="impact">
+            <div class="impact-head"><h3>LIKELY EFFECTS IN THIS AREA</h3></div>
+            <p id="impactText">—</p>
+            <div class="impact-stats">
+              <div><small>Elderly Pop.</small><b id="impElderly">—</b></div>
+              <div><small>Outdoor Workforce</small><b id="impOutdoor">—</b></div>
+              <div><small>Pop. Density</small><b id="impDensity">—</b></div>
+              <div><small>Green Cover</small><b id="impGreen">—</b></div>
+            </div>
           </div>
         </div>
 
@@ -171,7 +186,11 @@
           <div class="alert-icon">!</div>
           <div><b id="alertHeadline">EARLY WARNING ALERT</b><span id="alertBody">Scanning forecast window…</span></div>
           <strong id="probability">Risk Probability: —</strong>
-          <button onclick="dispatchAlert()">Dispatch SMS/WhatsApp</button>
+          <div class="alert-actions">
+            <input id="phoneInput" type="tel" placeholder="+91 98XXXXXXXX" maxlength="17">
+            <button onclick="dispatchAlert('sms')">SMS</button>
+            <button onclick="dispatchAlert('whatsapp')">WhatsApp</button>
+          </div>
         </div>
       </section>
     </main>
