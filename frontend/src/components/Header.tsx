@@ -3,10 +3,10 @@ import type { UserRole, RiskLevel, CityLocation } from '../types';
 import { AlertTriangle, Shield, Bell, RefreshCw, Building2 } from 'lucide-react';
 
 interface HeaderProps {
-  currentRole: UserRole;
-  setRole: (role: UserRole) => void;
-  horizon: number;
-  setHorizon: (h: number) => void;
+  currentRole?: UserRole;
+  setRole?: (role: UserRole) => void;
+  horizon?: number;
+  setHorizon?: (h: number) => void;
   overallRiskLevel: RiskLevel;
   onRefresh: () => void;
   isSimulating: boolean;
@@ -19,10 +19,6 @@ interface HeaderProps {
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  currentRole,
-  setRole,
-  horizon,
-  setHorizon,
   overallRiskLevel,
   onRefresh,
   isSimulating,
@@ -33,6 +29,7 @@ export const Header: React.FC<HeaderProps> = ({
   selectedLocationId,
   setSelectedLocationId
 }) => {
+
   const getRiskBadgeColor = (level: RiskLevel) => {
     switch (level) {
       case 'LOW': return 'bg-emerald-100 text-emerald-800 border-emerald-300';
@@ -149,45 +146,10 @@ export const Header: React.FC<HeaderProps> = ({
             <Bell className="w-4 h-4" />
             <span>CITY RISK: {overallRiskLevel}</span>
           </div>
-
-          {/* Forecast Horizon Selector */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-md border border-slate-200 text-xs">
-            <span className="text-slate-500 px-2 font-semibold">Horizon:</span>
-            {[24, 48, 72, 96, 120].map((h) => (
-              <button
-                key={h}
-                onClick={() => setHorizon(h)}
-                className={`px-2 py-1 rounded font-medium transition-all ${
-                  horizon === h
-                    ? 'bg-sky-600 text-white shadow'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                }`}
-              >
-                {h}h ({h / 24}d)
-              </button>
-            ))}
-          </div>
-
-          {/* Role-Based Access Control Switcher */}
-          <div className="flex items-center bg-slate-100 p-1 rounded-md border border-slate-200 text-xs">
-            <span className="text-slate-500 px-2 font-semibold">Role:</span>
-            {(['Public User', 'Health Official', 'Municipal Administrator'] as UserRole[]).map((role) => (
-              <button
-                key={role}
-                onClick={() => setRole(role)}
-                className={`px-2.5 py-1 rounded font-medium transition-all ${
-                  currentRole === role
-                    ? 'bg-amber-600 text-white shadow'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200'
-                }`}
-              >
-                {role}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
     </header>
+
   );
 };
 
