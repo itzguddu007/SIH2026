@@ -26,27 +26,8 @@ export const MunicipalActionCenter: React.FC<MunicipalActionCenterProps> = ({
   const activeAlertsCount = alerts.filter(a => a.status === 'ACTIVE').length;
   const extremeAlertsCount = alerts.filter(a => a.risk_level === 'EXTREME').length;
 
-  const handleAssign = async (actionId: number) => {
-    const assignee = prompt('Enter name/team to assign this directive:', 'Disaster Response Team Alpha');
-    if (!assignee) return;
-    try {
-      await api.assignAction(actionId, assignee, 'Assigned via Command Dashboard');
-      onRefresh();
-    } catch (e) {
-      alert('Failed to assign action item');
-    }
-  };
-
-  const handleComplete = async (actionId: number) => {
-    try {
-      await api.completeAction(actionId, 'Marked completed by Municipal Administrator');
-      onRefresh();
-    } catch (e) {
-      alert('Failed to complete action item');
-    }
-  };
-
   const handleSendNotification = async (e: React.FormEvent) => {
+
     e.preventDefault();
     setSending(true);
     setSendResult(null);
@@ -112,75 +93,10 @@ export const MunicipalActionCenter: React.FC<MunicipalActionCenterProps> = ({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left 2 Cols: Interventions Checklist & Active Alerts */}
+        {/* Left 2 Cols: Active Emergency Heat Alerts */}
         <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
-                <CheckCircle className="w-5 h-5 text-emerald-600" />
-                Municipal Emergency Interventions Checklist
-              </h2>
-              <span className="text-xs text-slate-500 font-medium">Action Control Room</span>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs text-left text-slate-700">
-                <thead className="text-[11px] text-slate-500 uppercase bg-slate-50 border-b border-slate-200">
-                  <tr>
-                    <th className="px-3 py-2.5">Directive</th>
-                    <th className="px-3 py-2.5">Target Ward</th>
-                    <th className="px-3 py-2.5">Assigned To</th>
-                    <th className="px-3 py-2.5">Status</th>
-                    <th className="px-3 py-2.5 text-right">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 font-medium">
-                  {actions.map((act) => (
-                    <tr key={act.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-3 py-3 font-semibold text-slate-900 max-w-xs">
-                        <div className="font-bold text-amber-700">{act.action_type.replace('_', ' ')}</div>
-                        <div className="text-[11px] text-slate-500 font-normal">{act.description}</div>
-                      </td>
-                      <td className="px-3 py-3 text-slate-700 font-mono">{act.ward_name}</td>
-                      <td className="px-3 py-3 text-slate-700 font-mono">{act.assigned_to}</td>
-                      <td className="px-3 py-3">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                          act.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
-                          act.status === 'IN_PROGRESS' ? 'bg-sky-100 text-sky-800 border border-sky-300' :
-                          'bg-amber-100 text-amber-800 border border-amber-300'
-                        }`}>
-                          {act.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-3 text-right space-x-2">
-                        {act.status !== 'COMPLETED' && (
-                          <>
-                            <button
-                              onClick={() => handleAssign(act.id)}
-                              className="px-2 py-1 bg-slate-100 hover:bg-slate-200 text-sky-700 rounded text-[11px] border border-slate-300 transition"
-                            >
-                              Assign
-                            </button>
-                            <button
-                              onClick={() => handleComplete(act.id)}
-                              className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded text-[11px] transition shadow-sm"
-                            >
-                              Complete
-                            </button>
-                          </>
-                        )}
-                        {act.status === 'COMPLETED' && (
-                          <span className="text-[11px] text-emerald-700 font-bold">✔ Done</span>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
           <div className="bg-white border border-slate-200 rounded-xl p-4 space-y-3 shadow-sm">
+
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
               <h2 className="text-base font-bold text-slate-900 tracking-tight flex items-center gap-2">
                 <ShieldAlert className="w-5 h-5 text-red-600" />
