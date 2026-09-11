@@ -2,18 +2,28 @@
 Municipal Action Center API Endpoints.
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Optional
 from datetime import datetime
 from app.database.session import get_db
-from app.database.models import ActionItem, Ward, Alert
+from app.database.models import ActionItem, Ward, Alert, Zone, Location
 from app.schemas.system import ActionAssignRequest, ActionCompleteRequest
 
 router = APIRouter(prefix="/api/actions", tags=["Municipal Action Center"])
 
 @router.get("")
-def get_action_items(db: Session = Depends(get_db)):
-    actions = db.query(ActionItem).order_by(ActionItem.created_at.desc()).all()
+def get_action_items(location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(ActionItem).join(Ward)
+    if location_id:
+        query = query.join(Zone).filter(Zone.location_id == location_id)
+    else:
+        first_loc = db.query(Location).first()
+        if first_loc:
+            query = query.join(Zone).filter(Zone.location_id == first_loc.id)
+
+    actions = query.order_by(ActionItem.created_at.desc()).all()
+
     res = []
     for a in actions:
         w = db.query(Ward).get(a.ward_id)

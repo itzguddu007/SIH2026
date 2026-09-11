@@ -1,6 +1,16 @@
 export type RiskLevel = 'LOW' | 'MODERATE' | 'HIGH' | 'VERY HIGH' | 'EXTREME';
 export type UserRole = 'Public User' | 'Health Official' | 'Municipal Administrator';
 
+export interface CityLocation {
+  id: number;
+  name: string;
+  state: string;
+  country: string;
+  lat: number;
+  lng: number;
+}
+
+
 export interface WeatherData {
   ward_id?: number;
   ward_name?: string;

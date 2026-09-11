@@ -1,6 +1,6 @@
 import React from 'react';
-import type { UserRole, RiskLevel } from '../types';
-import { AlertTriangle, Shield, Bell, RefreshCw } from 'lucide-react';
+import type { UserRole, RiskLevel, CityLocation } from '../types';
+import { AlertTriangle, Shield, Bell, RefreshCw, Building2 } from 'lucide-react';
 
 interface HeaderProps {
   currentRole: UserRole;
@@ -10,6 +10,12 @@ interface HeaderProps {
   overallRiskLevel: RiskLevel;
   onRefresh: () => void;
   isSimulating: boolean;
+  onSyncLive?: () => void;
+  isLiveSyncing?: boolean;
+  syncStatus?: any;
+  locations?: CityLocation[];
+  selectedLocationId?: number;
+  setSelectedLocationId?: (id: number) => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
@@ -19,7 +25,13 @@ export const Header: React.FC<HeaderProps> = ({
   setHorizon,
   overallRiskLevel,
   onRefresh,
-  isSimulating
+  isSimulating,
+  onSyncLive,
+  isLiveSyncing = false,
+  syncStatus,
+  locations = [],
+  selectedLocationId,
+  setSelectedLocationId
 }) => {
   const getRiskBadgeColor = (level: RiskLevel) => {
     switch (level) {
@@ -50,19 +62,44 @@ export const Header: React.FC<HeaderProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded text-[11px] font-mono font-semibold">
-            DEMONSTRATION & PROTOTYPE MODE
-          </span>
+          {syncStatus?.is_live ? (
+            <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-2.5 py-0.5 rounded text-[11px] font-mono font-semibold flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block" />
+              LIVE OPEN-METEO WEATHER FEED ACTIVE
+            </span>
+          ) : (
+            <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded text-[11px] font-mono font-semibold">
+              DEMONSTRATION & PROTOTYPE MODE
+            </span>
+          )}
+
+          {onSyncLive && (
+            <button
+              onClick={onSyncLive}
+              disabled={isLiveSyncing}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-semibold transition-all ${
+                isLiveSyncing 
+                  ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                  : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-sm'
+              }`}
+              title="Fetch Real-Time Live Weather from Open-Meteo API"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isLiveSyncing ? 'animate-spin' : ''}`} />
+              <span>{isLiveSyncing ? 'Syncing Weather...' : 'Sync Live Weather'}</span>
+            </button>
+          )}
+
           <button 
             onClick={onRefresh}
-            className="flex items-center gap-1 text-slate-300 hover:text-white transition-colors"
-            title="Refresh Live Data"
+            className="flex items-center gap-1 text-slate-300 hover:text-white transition-colors ml-1"
+            title="Refresh Dashboard View"
           >
             <RefreshCw className="w-3 h-3" />
             <span>Refresh</span>
           </button>
         </div>
       </div>
+
 
       {/* Main Command Header */}
       <div className="px-4 py-3 flex flex-wrap items-center justify-between gap-4">
@@ -88,6 +125,25 @@ export const Header: React.FC<HeaderProps> = ({
 
         {/* Status & Control Panel */}
         <div className="flex flex-wrap items-center gap-3">
+          {/* City Selector Dropdown */}
+          {locations && locations.length > 0 && setSelectedLocationId && (
+            <div className="flex items-center bg-slate-900 text-white p-1.5 rounded-md border border-slate-700 text-xs shadow-sm">
+              <Building2 className="w-3.5 h-3.5 text-amber-400 mr-1.5 ml-1" />
+              <span className="text-slate-400 font-semibold mr-1.5 hidden sm:inline">City:</span>
+              <select
+                value={selectedLocationId}
+                onChange={(e) => setSelectedLocationId(Number(e.target.value))}
+                className="bg-slate-800 text-white font-bold py-1 px-2 rounded border border-slate-700 focus:outline-none focus:ring-1 focus:ring-amber-500 cursor-pointer"
+              >
+                {locations.map((loc) => (
+                  <option key={loc.id} value={loc.id}>
+                    {loc.name} ({loc.state})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           {/* Overall Danger Level Indicator */}
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-bold shadow-sm ${getRiskBadgeColor(overallRiskLevel)}`}>
             <Bell className="w-4 h-4" />
@@ -134,3 +190,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

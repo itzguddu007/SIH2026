@@ -2,18 +2,28 @@
 Alert Engine & Notification Endpoints (SMS/WhatsApp).
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.database.session import get_db
-from app.database.models import Alert, NotificationLog, Ward
+from app.database.models import Alert, NotificationLog, Ward, Zone, Location
 from app.schemas.system import AlertSendRequest
 from app.alerts.notifications import get_notification_provider
 
 router = APIRouter(prefix="/api/alerts", tags=["Alerts & Notifications"])
 
 @router.get("")
-def get_active_alerts(db: Session = Depends(get_db)):
-    alerts = db.query(Alert).order_by(Alert.created_at.desc()).all()
+def get_active_alerts(location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(Alert).join(Ward)
+    if location_id:
+        query = query.join(Zone).filter(Zone.location_id == location_id)
+    else:
+        first_loc = db.query(Location).first()
+        if first_loc:
+            query = query.join(Zone).filter(Zone.location_id == first_loc.id)
+
+    alerts = query.order_by(Alert.created_at.desc()).all()
+
     res = []
     for a in alerts:
         w = db.query(Ward).get(a.ward_id)

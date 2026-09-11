@@ -1,17 +1,29 @@
 """
-GIS Layer & Map Endpoints (GeoJSON FeatureCollection format).
+GIS Layer & Map Endpoints (GeoJSON FeatureCollection format with Location filtering).
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
+from typing import Optional
 from app.database.session import get_db
-from app.database.models import Ward, Zone, Hospital, CoolingCenter, RiskAssessment, WeatherObservation, PopulationVulnerability
+from app.database.models import Ward, Zone, Hospital, CoolingCenter, RiskAssessment, WeatherObservation, PopulationVulnerability, Location
 
 router = APIRouter(prefix="/api/map", tags=["GIS System"])
 
+def get_location_zone_ids(db: Session, location_id: Optional[int]) -> list[int]:
+    """Helper to get zone IDs for given location_id (defaulting to 1st location)."""
+    if not location_id:
+        first_loc = db.query(Location).first()
+        location_id = first_loc.id if first_loc else 1
+
+    zones = db.query(Zone.id).filter(Zone.location_id == location_id).all()
+    return [z[0] for z in zones]
+
+
 @router.get("/wards")
-def get_wards_geojson(db: Session = Depends(get_db)):
-    wards = db.query(Ward).all()
+def get_wards_geojson(location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    zone_ids = get_location_zone_ids(db, location_id)
+    wards = db.query(Ward).filter(Ward.zone_id.in_(zone_ids)).all()
     features = []
 
     for w in wards:
@@ -52,9 +64,11 @@ def get_wards_geojson(db: Session = Depends(get_db)):
         "features": features
     }
 
+
 @router.get("/hospitals")
-def get_hospitals_map(db: Session = Depends(get_db)):
-    hospitals = db.query(Hospital).all()
+def get_hospitals_map(location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    zone_ids = get_location_zone_ids(db, location_id)
+    hospitals = db.query(Hospital).join(Ward).filter(Ward.zone_id.in_(zone_ids)).all()
     res = []
     for h in hospitals:
         res.append({
@@ -74,9 +88,11 @@ def get_hospitals_map(db: Session = Depends(get_db)):
         })
     return res
 
+
 @router.get("/cooling-centers")
-def get_cooling_centers_map(db: Session = Depends(get_db)):
-    centers = db.query(CoolingCenter).all()
+def get_cooling_centers_map(location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    zone_ids = get_location_zone_ids(db, location_id)
+    centers = db.query(CoolingCenter).join(Ward).filter(Ward.zone_id.in_(zone_ids)).all()
     res = []
     for c in centers:
         res.append({

@@ -17,6 +17,7 @@ from app.api.actions_api import router as actions_router
 from app.api.simulation_api import router as simulation_router
 from app.api.analytics_api import router as analytics_router
 from app.api.ml_eval_api import router as ml_eval_router
+from app.api.locations_api import router as locations_router
 
 app = FastAPI(
     title="MoES NCMRWF Extreme Heatwave Early Warning & Human Thermal Stress System",
@@ -34,6 +35,7 @@ app.add_middleware(
 )
 
 # Register API Routers
+app.include_router(locations_router)
 app.include_router(thermal_router)
 app.include_router(weather_router)
 app.include_router(risk_router)
@@ -43,6 +45,7 @@ app.include_router(actions_router)
 app.include_router(simulation_router)
 app.include_router(analytics_router)
 app.include_router(ml_eval_router)
+
 
 @app.on_event("startup")
 def startup_event():

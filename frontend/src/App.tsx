@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import type { 
   UserRole, RiskLevel, WeatherForecast, WardGeoJson, 
   Hospital, CoolingCenter, AlertItem, ActionItem, NotificationLog, 
-  SimulationResult, WardGeoProperties 
+  SimulationResult, WardGeoProperties, CityLocation 
 } from './types';
+
 import { api } from './services/api';
 
 import { Header } from './components/Header';
@@ -29,6 +30,9 @@ export function App() {
   const [horizon, setHorizon] = useState<number>(24);
   const [gisMetric, setGisMetric] = useState<'HTSI' | 'MORTALITY' | 'VULNERABLE' | 'WORKERS'>('HTSI');
 
+  const [locations, setLocations] = useState<CityLocation[]>([]);
+  const [selectedLocationId, setSelectedLocationId] = useState<number>(1);
+
   const [currentRisk, setCurrentRisk] = useState<any>(null);
   const [forecasts, setForecasts] = useState<WeatherForecast[]>([]);
   const [geoJsonData, setGeoJsonData] = useState<WardGeoJson | null>(null);
@@ -43,18 +47,38 @@ export function App() {
   const [selectedWardDetail, setSelectedWardDetail] = useState<any>(null);
 
   const [isSimulating, setIsSimulating] = useState<boolean>(false);
+  const [syncStatus, setSyncStatus] = useState<any>(null);
+  const [isLiveSyncing, setIsLiveSyncing] = useState<boolean>(false);
 
-  const loadData = async () => {
+  // Load locations list once on mount
+  useEffect(() => {
+    async function loadLocations() {
+      try {
+        const locs = await api.getLocations();
+        setLocations(locs);
+        if (locs.length > 0) {
+          setSelectedLocationId(locs[0].id);
+        }
+      } catch (e) {
+        console.error('Locations fetch error', e);
+      }
+    }
+    loadLocations();
+  }, []);
+
+  const loadData = async (targetLocId?: number) => {
+    const locId = targetLocId ?? selectedLocationId;
     try {
-      const [riskRes, foreRes, geoRes, hospRes, coolRes, alertRes, actionRes, logRes] = await Promise.all([
-        api.getCurrentRisk(),
-        api.getWeatherForecast(),
-        api.getWardsGeoJson(),
-        api.getHospitals(),
-        api.getCoolingCenters(),
-        api.getAlerts(),
-        api.getActionItems(),
-        api.getNotificationLogs()
+      const [riskRes, foreRes, geoRes, hospRes, coolRes, alertRes, actionRes, logRes, statusRes] = await Promise.all([
+        api.getCurrentRisk(undefined, locId),
+        api.getWeatherForecast(undefined, locId),
+        api.getWardsGeoJson(locId),
+        api.getHospitals(locId),
+        api.getCoolingCenters(locId),
+        api.getAlerts(locId),
+        api.getActionItems(locId),
+        api.getNotificationLogs(),
+        api.getSyncStatus().catch(() => null)
       ]);
 
       setCurrentRisk(riskRes);
@@ -65,8 +89,9 @@ export function App() {
       setAlerts(alertRes);
       setActions(actionRes);
       setLogs(logRes);
+      if (statusRes) setSyncStatus(statusRes);
 
-      if (geoRes?.features?.length > 0 && selectedWardId === null) {
+      if (geoRes?.features?.length > 0) {
         const firstWard = geoRes.features[0].properties;
         setSelectedWardId(firstWard.ward_id);
         setSelectedWardProps(firstWard);
@@ -75,6 +100,32 @@ export function App() {
       console.error('Data loading error', e);
     }
   };
+
+  const handleLiveSync = async () => {
+    setIsLiveSyncing(true);
+    try {
+      const res = await api.syncLiveWeather(selectedLocationId);
+      setSyncStatus(res);
+      await loadData(selectedLocationId);
+      if (selectedWardId !== null) {
+        const detail = await api.getWardRiskDetail(selectedWardId);
+        setSelectedWardDetail(detail);
+      }
+    } catch (e) {
+      console.error('Live sync error', e);
+    } finally {
+      setIsLiveSyncing(false);
+    }
+  };
+
+  const handleCityChange = (newLocId: number) => {
+    setSelectedLocationId(newLocId);
+    setSelectedWardId(null);
+    setSelectedWardProps(null);
+    setSelectedWardDetail(null);
+    loadData(newLocId);
+  };
+
 
   useEffect(() => {
     loadData();
@@ -137,9 +188,17 @@ export function App() {
         horizon={horizon}
         setHorizon={setHorizon}
         overallRiskLevel={displayRiskLevel}
-        onRefresh={loadData}
+        onRefresh={() => loadData(selectedLocationId)}
         isSimulating={isSimulating}
+        onSyncLive={handleLiveSync}
+        isLiveSyncing={isLiveSyncing}
+        syncStatus={syncStatus}
+        locations={locations}
+        selectedLocationId={selectedLocationId}
+        setSelectedLocationId={handleCityChange}
       />
+
+
 
       <main className="flex-1 max-w-[1600px] w-full mx-auto p-4 md:p-6 space-y-6">
         {/* Navigation Bar */}

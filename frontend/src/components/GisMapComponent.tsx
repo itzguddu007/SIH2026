@@ -135,8 +135,12 @@ export const GisMapComponent: React.FC<GisMapProps> = ({
       }).addTo(map);
 
       geoJsonLayerRef.current = layer;
+      if (layer.getBounds().isValid()) {
+        map.fitBounds(layer.getBounds(), { padding: [20, 20] });
+      }
     }
   }, [geoJsonData, activeMetric, selectedWardId, showBoundaries]);
+
 
   useEffect(() => {
     const map = mapInstanceRef.current;

@@ -6,17 +6,24 @@ from fastapi import APIRouter, Depends, Query, HTTPException
 from sqlalchemy.orm import Session
 from typing import Optional
 from app.database.session import get_db
-from app.database.models import RiskAssessment, Ward, PopulationVulnerability, WeatherObservation
+from app.database.models import RiskAssessment, Ward, Zone, PopulationVulnerability, WeatherObservation, Location
 
 router = APIRouter(prefix="/api/risk", tags=["Risk Assessment"])
 
 @router.get("/current")
-def get_current_risk(zone_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+def get_current_risk(zone_id: Optional[int] = Query(None), location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
     query = db.query(RiskAssessment).join(Ward)
     if zone_id:
         query = query.filter(Ward.zone_id == zone_id)
+    elif location_id:
+        query = query.join(Zone).filter(Zone.location_id == location_id)
+    else:
+        first_loc = db.query(Location).first()
+        if first_loc:
+            query = query.join(Zone).filter(Zone.location_id == first_loc.id)
 
     assessments = query.all()
+
     if not assessments:
         return {"error": "No assessments found"}
 

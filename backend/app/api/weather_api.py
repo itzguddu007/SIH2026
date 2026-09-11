@@ -6,12 +6,25 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 from typing import Optional, List
 from app.database.session import get_db
-from app.database.models import WeatherObservation, WeatherForecast, Ward
+from app.database.models import WeatherObservation, WeatherForecast, Ward, Zone, Location
+from app.services.live_weather_service import sync_live_weather, get_sync_status
 
 router = APIRouter(prefix="/api/weather", tags=["Weather"])
 
+@router.post("/sync-live")
+def trigger_live_weather_sync(location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    """Trigger live synchronization with Open-Meteo Meteorological API."""
+    result = sync_live_weather(db, location_id=location_id)
+    return result
+
+@router.get("/sync-status")
+def get_live_weather_sync_status():
+    """Return live sync status and provider metadata."""
+    return get_sync_status()
+
+
 @router.get("/current")
-def get_current_weather(ward_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+def get_current_weather(ward_id: Optional[int] = Query(None), location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
     if ward_id:
         obs = db.query(WeatherObservation).filter(WeatherObservation.ward_id == ward_id).order_by(WeatherObservation.timestamp.desc()).first()
         if not obs:
@@ -30,8 +43,21 @@ def get_current_weather(ward_id: Optional[int] = Query(None), db: Session = Depe
             "timestamp": obs.timestamp.isoformat()
         }
     else:
-        # Average across all wards for city KPI
-        obs_list = db.query(WeatherObservation).all()
+        # Filter observations by location
+        query = db.query(WeatherObservation).join(Ward)
+        city_name = "Selected Metro Region"
+        if location_id:
+            loc = db.query(Location).get(location_id)
+            if loc:
+                city_name = loc.name
+            query = query.join(Zone).filter(Zone.location_id == location_id)
+        else:
+            first_loc = db.query(Location).first()
+            if first_loc:
+                city_name = first_loc.name
+                query = query.join(Zone).filter(Zone.location_id == first_loc.id)
+
+        obs_list = query.all()
         if not obs_list:
             return {}
         avg_temp = sum(o.temp_celsius for o in obs_list) / len(obs_list)
@@ -41,7 +67,7 @@ def get_current_weather(ward_id: Optional[int] = Query(None), db: Session = Depe
         avg_utci = sum(o.utci for o in obs_list) / len(obs_list)
 
         return {
-            "city": "New Delhi National Capital Region",
+            "city": city_name,
             "ward_count": len(obs_list),
             "temp_celsius": round(avg_temp, 1),
             "relative_humidity": round(avg_hum, 1),
@@ -50,11 +76,18 @@ def get_current_weather(ward_id: Optional[int] = Query(None), db: Session = Depe
             "utci": round(avg_utci, 1)
         }
 
+
 @router.get("/forecast")
-def get_weather_forecast(ward_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
-    query = db.query(WeatherForecast)
+def get_weather_forecast(ward_id: Optional[int] = Query(None), location_id: Optional[int] = Query(None), db: Session = Depends(get_db)):
+    query = db.query(WeatherForecast).join(Ward)
     if ward_id:
         query = query.filter(WeatherForecast.ward_id == ward_id)
+    elif location_id:
+        query = query.join(Zone).filter(Zone.location_id == location_id)
+    else:
+        first_loc = db.query(Location).first()
+        if first_loc:
+            query = query.join(Zone).filter(Zone.location_id == first_loc.id)
 
     forecasts = query.order_by(WeatherForecast.horizon_hours).all()
 
@@ -103,3 +136,4 @@ def get_weather_forecast(ward_id: Optional[int] = Query(None), db: Session = Dep
         })
 
     return result
+
