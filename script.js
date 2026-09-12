@@ -57,13 +57,35 @@ function cityMeta(city){ return HEAT_DATA.cities[city]; }
 /* ---------- map ---------- */
 function initMap(){
   map=L.map('map',{zoomControl:true}).setView([22.5,79],5);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
-    subdomains:'abcd',
-    maxZoom:19,
-    attribution:'© OpenStreetMap contributors © CARTO'
-  }).addTo(map);
+  // Base layers: Full-color OpenStreetMap, Esri Topographic, and Esri Dark
+  const colorStreet = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  });
+
+  const colorTopo = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 18,
+    attribution: 'Tiles &copy; Esri'
+  });
+
+  const darkBase = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 16,
+    attribution: 'Tiles &copy; Esri'
+  });
+
+  // Add default full-color basemap to main map
+  colorStreet.addTo(map);
+
+  // Basemap switcher
+  L.control.layers({
+    "Full Color (Street)": colorStreet,
+    "Full Color (Topo)": colorTopo,
+    "Dark Mode": darkBase
+  }, null, { position: 'topright' }).addTo(map);
+
+  // Mini map with full-color basemap
   miniMap=L.map('miniMap',{zoomControl:true,attributionControl:false}).setView([22.57,88.36],10);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(miniMap);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:19}).addTo(miniMap);
 
   CITY_ORDER.forEach(name=>{
     const c = cityMeta(name);

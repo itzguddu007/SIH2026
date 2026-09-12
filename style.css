@@ -122,3 +122,23 @@
   .live-city-tabs{overflow-x:auto;flex-wrap:nowrap}
   .live-calc-form{grid-template-columns:1fr}
 }
+
+/* Leaflet layer control styling */
+.leaflet-control-layers {
+  background: #0d1d30 !important;
+  color: #eaf1fb !important;
+  border: 1px solid #263c53 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+  font-size: 11px !important;
+  padding: 6px 10px !important;
+}
+.leaflet-control-layers label {
+  color: #eaf1fb !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin: 3px 0 !important;
+  cursor: pointer;
+}
+
