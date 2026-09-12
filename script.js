@@ -10,20 +10,24 @@ function doyToDate(doy){
   while(d>MDAYS[m]){d-=MDAYS[m];m++;}
   return {day:d, month:MONTHS[m], label:`${d} ${MONTHS[m]} 2025`};
 }
-/* doy <-> ISO date string for the calendar input (2025, non-leap) */
-const YEAR_START = new Date(2025,0,1);
-function doyToISO(doy){
-  const d = new Date(2025,0,1 + (doy-1));
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  return `${d.getFullYear()}-${mm}-${dd}`;
-}
-function isoToDoy(iso){
-  const [y,m,d] = iso.split('-').map(Number);
-  const dt = new Date(y,m-1,d);
-  return Math.round((dt-YEAR_START)/86400000)+1;
+function doyToISODate(doy){
+    const date = new Date(2025, 0, doy);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+
+    return `${year}-${month}-${day}`;
 }
 
+function dateToDayOfYear(dateString){
+    const date = new Date(dateString + "T00:00:00");
+    const start = new Date(2025, 0, 1);
+
+    return Math.floor(
+        (date - start) / (1000 * 60 * 60 * 24)
+    ) + 1;
+}
 /* WBGT (deg C) -> 0-100 stress score, piecewise-linear across category boundaries */
 function wbgtToScore(wbgt){
   const xs=[20,28,30,32,34,38], ys=[0,40,55,70,85,100];
@@ -53,9 +57,13 @@ function cityMeta(city){ return HEAT_DATA.cities[city]; }
 /* ---------- map ---------- */
 function initMap(){
   map=L.map('map',{zoomControl:true}).setView([22.5,79],5);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OpenStreetMap contributors'}).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    subdomains:'abcd',
+    maxZoom:19,
+    attribution:'© OpenStreetMap contributors © CARTO'
+  }).addTo(map);
   miniMap=L.map('miniMap',{zoomControl:true,attributionControl:false}).setView([22.57,88.36],10);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(miniMap);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{subdomains:'abcd',maxZoom:19}).addTo(miniMap);
 
   CITY_ORDER.forEach(name=>{
     const c = cityMeta(name);
@@ -71,9 +79,7 @@ function refreshMapColors(){
     const color = RISK_COLOR[r.cat];
     const isSel = name===currentCity;
     cityMarkers[name].setStyle({fillColor:color, radius:isSel?12:8, weight:isSel?3:2});
-    const lw = LIVE_WEATHER[name];
-    const liveLine = lw ? `<br><span style="color:#3ddc84">Live now: ${lw.temp}°C, ${lw.rh}% RH, ${lw.wind} km/h</span>` : '';
-    cityMarkers[name].bindPopup(`<b>${name}</b><br>Thermal Stress: <b>${wbgtToScore(r.wbgt)}/100</b><br><span style="color:${color}">${r.cat.toUpperCase()} RISK</span><br>WBGT ${r.wbgt}°C · Tmax ${r.tmax}°C${liveLine}<br><button onclick="selectCity('${name}')" style="margin-top:7px">Zoom here</button>`);
+    cityMarkers[name].bindPopup(`<b>${name}</b><br>Thermal Stress: <b>${wbgtToScore(r.wbgt)}/100</b><br><span style="color:${color}">${r.cat.toUpperCase()} RISK</span><br>WBGT ${r.wbgt}°C · Tmax ${r.tmax}°C<br><button onclick="selectCity('${name}')" style="margin-top:7px">Zoom here</button>`);
   });
 }
 
@@ -104,48 +110,8 @@ function searchLocation(){
   const key=CITY_ORDER.find(k=>k.toLowerCase()===q) || CITY_ORDER.find(k=>k.toLowerCase().includes(q));
   if(key) selectCity(key);
   else showToast('Try any of: '+CITY_ORDER.slice(0,6).join(', ')+'…');
-  hideSuggestions();
 }
 function changeLocation(){document.getElementById('locationInput').focus();showToast('Search another city')}
-
-/* ---------- search autocomplete (min 4, up to 5 suggestions) ---------- */
-function renderSuggestions(rawQuery){
-  const box = document.getElementById('searchSuggest');
-  const q = rawQuery.toLowerCase().trim();
-  let matches = q ? CITY_ORDER.filter(c=>c.toLowerCase().includes(q)) : [];
-  // guarantee at least 4 options so the user always has cities to pick from
-  if(matches.length < 4){
-    const rest = CITY_ORDER
-      .filter(c=>!matches.includes(c))
-      .sort((a,b)=> wbgtToScore(rec(b,currentDoy).wbgt) - wbgtToScore(rec(a,currentDoy).wbgt)); // highest risk first
-    matches = matches.concat(rest).slice(0, Math.max(4, matches.length));
-  }
-  matches = matches.slice(0,5);
-
-  if(matches.length===0){ hideSuggestions(); return; }
-  box.innerHTML = matches.map(name=>{
-    const r = rec(name,currentDoy);
-    return `<div class="sg-item" data-city="${name}"><span><span class="sg-dot" style="background:${RISK_COLOR[r.cat]}"></span>${name}</span><small>${r.cat}</small></div>`;
-  }).join('');
-  box.querySelectorAll('.sg-item').forEach(el=>{
-    el.addEventListener('click', ()=>{
-      document.getElementById('locationInput').value = el.dataset.city;
-      selectCity(el.dataset.city);
-      hideSuggestions();
-    });
-  });
-  box.classList.add('show');
-}
-function hideSuggestions(){ document.getElementById('searchSuggest').classList.remove('show'); }
-document.getElementById('locationInput').addEventListener('input', e=> renderSuggestions(e.target.value));
-document.getElementById('locationInput').addEventListener('focus', e=> renderSuggestions(e.target.value));
-document.getElementById('locationInput').addEventListener('keydown', e=>{
-  if(e.key==='Enter'){ searchLocation(); }
-  if(e.key==='Escape'){ hideSuggestions(); }
-});
-document.addEventListener('click', e=>{
-  if(!e.target.closest('.search-wrap')) hideSuggestions();
-});
 
 /* ---------- dashboard render ---------- */
 function updateDashboard(){
@@ -182,76 +148,7 @@ function updateDashboard(){
   renderChart();
   renderEarlyWarning();
   renderBell();
-  renderImpact();
-  renderLiveNote();
   calculateRisk();
-}
-
-/* ---------- localized effects (uses per-city demographic fields) ---------- */
-function renderImpact(){
-  const c = cityMeta(currentCity);
-  const r = rec(currentCity, currentDoy);
-  const d = c.demo;
-  document.getElementById('impElderly').textContent = d.elderly_pct+'%';
-  document.getElementById('impOutdoor').textContent = Math.round(d.outdoor_worker_idx*100)+'%';
-  document.getElementById('impDensity').textContent = d.pop_density.toLocaleString('en-IN')+'/km²';
-  document.getElementById('impGreen').textContent = Math.round(d.green_cover_idx*100)+'%';
-
-  const effects=[];
-  if(ELEVATED.includes(r.cat)){
-    effects.push(`heat stroke and dehydration risk rises sharply for the ~${d.elderly_pct}% elderly population`);
-  }
-  if(d.outdoor_worker_idx>=0.4 && ELEVATED.includes(r.cat)){
-    effects.push(`labour productivity loss likely among the sizeable outdoor workforce (index ${d.outdoor_worker_idx})`);
-  }
-  if(d.pop_density>8000 && ELEVATED.includes(r.cat)){
-    effects.push(`dense urban fabric (${d.pop_density.toLocaleString('en-IN')}/km²) traps heat overnight, keeping nighttime WBGT elevated`);
-  }
-  if(d.green_cover_idx<0.2){
-    effects.push(`low green cover (${Math.round(d.green_cover_idx*100)}%) limits natural cooling, worsening the urban heat island effect`);
-  }
-  if(r.cat==='Severe' || r.cat==='Extreme'){
-    effects.push('rising power demand for cooling may strain the grid, and water demand typically spikes');
-  }
-  if(effects.length===0) effects.push('conditions are manageable at this level — no significant secondary effects expected');
-  document.getElementById('impactText').textContent = `At current ${r.cat} risk in ${currentCity}: ${effects.join('; ')}.`;
-}
-
-/* ---------- live weather (Open-Meteo, no API key, all 20 cities in one call) ---------- */
-let LIVE_WEATHER = {};
-async function fetchLiveWeather(){
-  try{
-    const lats = CITY_ORDER.map(n=>cityMeta(n).lat).join(',');
-    const lons = CITY_ORDER.map(n=>cityMeta(n).lon).join(',');
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lons}&current=temperature_2m,relative_humidity_2m,wind_speed_10m&timezone=auto`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const arr = Array.isArray(data) ? data : [data];
-    arr.forEach((entry,i)=>{
-      const name = CITY_ORDER[i];
-      if(entry && entry.current){
-        LIVE_WEATHER[name] = {
-          temp: Math.round(entry.current.temperature_2m),
-          rh: Math.round(entry.current.relative_humidity_2m),
-          wind: Math.round(entry.current.wind_speed_10m),
-          time: entry.current.time
-        };
-      }
-    });
-    renderLiveNote();
-    refreshMapColors();
-  }catch(err){
-    const el = document.getElementById('liveNote');
-    if(el) el.textContent = 'Live weather unavailable right now';
-  }
-}
-function renderLiveNote(){
-  const el = document.getElementById('liveNote');
-  if(!el) return;
-  const lw = LIVE_WEATHER[currentCity];
-  el.textContent = lw
-    ? `Live now: ${lw.temp}°C · ${lw.rh}% RH · ${lw.wind} km/h wind (updated ${lw.time ? lw.time.slice(11,16) : ''})`
-    : 'Live weather loading…';
 }
 
 function renderForecast(){
@@ -345,26 +242,59 @@ function renderEarlyWarning(){
   renderPrecautions(hit ? hit.rec.cat : rec(currentCity,currentDoy).cat);
 }
 
-function dispatchAlert(channel){
-  const hit = scanEarlyWarning(currentCity, currentDoy, 5);
-  const r = hit ? hit.rec : rec(currentCity,currentDoy);
-  const raw = document.getElementById('phoneInput').value.trim();
-  const digits = raw.replace(/[^\d]/g,'');
-  if(digits.length < 10){
-    showToast('Enter a valid mobile number (with country code) to dispatch the alert');
-    document.getElementById('phoneInput').focus();
-    return;
-  }
-  const message = `HEAT ALERT: ${currentCity} — ${r.cat.toUpperCase()} risk. WBGT ${r.wbgt}°C, feels like ${r.hi}°C. Est. excess mortality +${r.excess_mortality_pct}%. ${HEAT_DATA.advisory[r.cat].split('.')[0]}.`;
+async function dispatchAlert(){
 
-  if(channel==='whatsapp'){
-    const waNumber = digits.length===10 ? '91'+digits : digits; // default to +91 if no country code given
-    window.open(`https://wa.me/${waNumber}?text=${encodeURIComponent(message)}`, '_blank');
-    showToast(`WhatsApp draft opened for +${waNumber} — ${r.cat} risk, WBGT ${r.wbgt}°C`);
-  } else {
-    const smsNumber = raw.startsWith('+') ? raw : (digits.length===10 ? '+91'+digits : '+'+digits);
-    window.location.href = `sms:${smsNumber}?&body=${encodeURIComponent(message)}`;
-    showToast(`SMS draft opened for ${smsNumber} — ${r.cat} risk, WBGT ${r.wbgt}°C`);
+  const hit = scanEarlyWarning(currentCity, currentDoy, 5);
+  const r = hit ? hit.rec : rec(currentCity, currentDoy);
+
+  const leadTime = hit
+    ? `${hit.lead} day${hit.lead === 1 ? '' : 's'}`
+    : "Immediate";
+
+  showToast("Dispatching alert...");
+
+  try {
+
+    const response = await fetch(
+      "https://YOUR-BACKEND-NAME.onrender.com/api/send-alert",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          city: currentCity,
+          risk: r.cat,
+          wbgt: r.wbgt,
+          excessMortality: r.excess_mortality_pct,
+          leadTime: leadTime
+        })
+      }
+    );
+
+    const result = await response.json();
+
+    if (result.success) {
+
+      showToast(
+        `SMS/WhatsApp sent to ${currentCity} zone authority`
+      );
+
+    } else {
+
+      showToast(
+        `Alert failed: ${result.message}`
+      );
+
+    }
+
+  } catch (error) {
+
+    console.error(error);
+
+    showToast(
+      "Unable to connect to alert server"
+    );
   }
 }
 
@@ -427,15 +357,14 @@ function calculateRisk(){
 /* ---------- date scrubber ---------- */
 function setDoy(d){
   currentDoy = Math.max(1, Math.min(365, d));
-  document.getElementById('dateCalendar').value = doyToISO(currentDoy);
+ document.getElementById('datePicker').value = doyToISODate(currentDoy);
   const dt = doyToDate(currentDoy);
   document.getElementById('dateLabel').textContent = dt.label;
   document.getElementById('doyLabel').textContent = currentDoy;
   updateDashboard();
 }
-document.getElementById('dateCalendar').addEventListener('change', e=>{
-  if(!e.target.value) return;
-  setDoy(isoToDoy(e.target.value));
+document.getElementById('datePicker').addEventListener('change', e => {
+    setDoy(dateToDayOfYear(e.target.value));
 });
 document.getElementById('prevBtn').addEventListener('click', ()=> setDoy(currentDoy-1) );
 document.getElementById('nextBtn').addEventListener('click', ()=> setDoy(currentDoy+1) );
@@ -462,6 +391,5 @@ window.addEventListener('load',()=>{
   setDoy(currentDoy);
   updateClock();
   setInterval(updateClock,30000);
-  fetchLiveWeather();
-  setInterval(fetchLiveWeather, 600000); // refresh live weather every 10 min
+  if(typeof initLiveData==='function') initLiveData();
 });

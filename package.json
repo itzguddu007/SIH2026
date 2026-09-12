@@ -1,0 +1,15 @@
+{
+  "name": "sih2026-heatwave-warning",
+  "version": "1.0.0",
+  "description": "Extreme Heatwave Early Warning and Human Thermal Stress Index",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "twilio": "^5.4.5"
+  }
+}

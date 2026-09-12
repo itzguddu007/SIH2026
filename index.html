@@ -16,7 +16,8 @@
       <div class="brand">
         <div class="brand-icon">☀</div>
         <div>
-          <h1>HEAT<span>GUARD</span></h1>
+          <h1>Heat<span>Guard</span></h1>
+         
           <small>Human Thermal Stress Index · SIH 26083</small>
         </div>
       </div>
@@ -26,7 +27,7 @@
         <button class="nav" onclick="focusMap()">◈ <span>Heat Risk Map</span></button>
         <button class="nav" onclick="scrollToSection('forecast')">♨ <span>Forecast &amp; Early Alerts</span></button>
         <button class="nav" onclick="scrollToSection('calculator')">▦ <span>Human Risk Calculator</span></button>
-        <button class="nav" onclick="scrollToSection('history')">▥ <span>Seasonal Trend</span></button>
+        <button class="nav" onclick="scrollToSection('history')">📈 <span>Seasonal Trend</span></button>
         <button class="nav" onclick="scrollToSection('precautions')">♥ <span>Risk-Level Precautions</span></button>
         <button class="nav" onclick="showToast('IMD 1°×1° gridded Tmax, 2025 · RH/wind/solar modeled from regional climatology · WBGT (Aus. BoM) + Heat Index (NOAA) + composite Mortality Risk Index')">ⓘ <span>About System</span></button>
       </nav>
@@ -48,12 +49,9 @@
 
     <main class="main">
       <header class="topbar">
-        <div class="search-wrap">
-          <div class="search">
-            <input id="locationInput" placeholder="Search any of 20 cities..." value="Kolkata" autocomplete="off">
-            <button onclick="searchLocation()">⌕</button>
-          </div>
-          <div class="search-suggest" id="searchSuggest"></div>
+        <div class="search">
+          <input id="locationInput" placeholder="Search any of 20 cities..." value="Kolkata">
+          <button onclick="searchLocation()">⌕</button>
         </div>
         <button class="location-btn" onclick="selectHighestRisk()">⌖ Highest Risk City</button>
         <div class="top-right">
@@ -63,15 +61,24 @@
       </header>
 
       <div class="datebar">
-        <div class="dlabel">Simulated system date<br><b id="dateLabel">—</b></div>
-        <input type="date" id="dateCalendar" min="2025-01-01" max="2025-12-31" value="2025-05-25">
-        <div class="dbtns">
-          <button id="prevBtn" title="Previous day">‹</button>
-          <button id="playBtn" class="play" title="Play">▶</button>
-          <button id="nextBtn" title="Next day">›</button>
-        </div>
-        <div class="dhint">Dataset: IMD gridded max-T, 2025 (day <span id="doyLabel">—</span>/365)</div>
-      </div>
+  <div class="dlabel">
+    Select Date<br>
+    <b id="dateLabel">—</b>
+  </div>
+
+  <input type="date" id="datePicker" min="2025-01-01" max="2025-12-31">
+
+  <div class="dbtns">
+    <button id="prevBtn" title="Previous day">‹</button>
+    <button id="playBtn" class="play" title="Play">▶</button>
+    <button id="nextBtn" title="Next day">›</button>
+  </div>
+
+  <div class="dhint">
+    Dataset: IMD gridded max-T, 2025 ·
+    Day <span id="doyLabel">—</span>/365
+  </div>
+</div>
 
       <section class="grid">
         <div class="map-card card" id="mapCard">
@@ -106,7 +113,6 @@
             <div class="metric"><small>Wind Speed (modeled)</small><b id="wind">8 km/h</b></div>
             <div class="metric"><small>Solar Load (modeled)</small><b id="solar">950 W/m²</b></div>
           </div>
-          <small class="live-note" id="liveNote">Live weather loading…</small>
 
           <div class="stress">
             <div class="stress-head"><h3>HUMAN THERMAL STRESS INDEX ⓘ</h3><span id="riskLabel">EXTREME RISK</span></div>
@@ -114,17 +120,6 @@
             <div class="bar"><i id="stressBar"></i></div>
             <div class="scale"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>
             <p>WBGT (outdoor): <b id="wbgtVal">36°C</b> &nbsp;·&nbsp; Mortality Risk Index: <b id="mriVal">5.6</b> &nbsp;·&nbsp; Est. excess mortality: <b id="excessVal">+19%</b></p>
-          </div>
-
-          <div class="impact" id="impact">
-            <div class="impact-head"><h3>LIKELY EFFECTS IN THIS AREA</h3></div>
-            <p id="impactText">—</p>
-            <div class="impact-stats">
-              <div><small>Elderly Pop.</small><b id="impElderly">—</b></div>
-              <div><small>Outdoor Workforce</small><b id="impOutdoor">—</b></div>
-              <div><small>Pop. Density</small><b id="impDensity">—</b></div>
-              <div><small>Green Cover</small><b id="impGreen">—</b></div>
-            </div>
           </div>
         </div>
 
@@ -185,11 +180,62 @@
           <div class="alert-icon">!</div>
           <div><b id="alertHeadline">EARLY WARNING ALERT</b><span id="alertBody">Scanning forecast window…</span></div>
           <strong id="probability">Risk Probability: —</strong>
-          <div class="alert-actions">
-            <input id="phoneInput" type="tel" placeholder="+91 98XXXXXXXX" maxlength="17">
-            <button onclick="dispatchAlert('sms')">SMS</button>
-            <button onclick="dispatchAlert('whatsapp')">WhatsApp</button>
+          <button onclick="dispatchAlert()">Dispatch SMS/WhatsApp</button>
+        </div>
+
+        <div class="live-section card" id="liveSection">
+          <div class="card-title">
+            <div>
+              <h2><span class="live-dot"></span> LIVE WEATHER DATA</h2>
+              <small>Real current + past-5-day conditions from Open-Meteo · same WBGT/Heat Index/MRI formulas as the 2025 dataset</small>
+            </div>
+            <div class="live-header-actions">
+              <span id="liveUpdated" class="live-updated">—</span>
+              <button id="liveRefreshBtn" class="live-refresh-btn">⟳ Refresh</button>
+            </div>
           </div>
+
+          <div class="live-city-tabs" id="liveCityTabs">
+            <button class="live-tab active" data-city="Delhi">Delhi</button>
+            <button class="live-tab" data-city="Mumbai">Mumbai</button>
+            <button class="live-tab" data-city="Kolkata">Kolkata</button>
+            <button class="live-tab" data-city="Chennai">Chennai</button>
+            <button class="live-tab" data-city="Bengaluru">Bengaluru</button>
+          </div>
+
+          <div class="live-stats-grid" id="liveStatsGrid">
+            <div class="live-empty">Loading live conditions…</div>
+          </div>
+
+          <div class="live-body-split">
+            <div class="live-history">
+              <h4>5-DAY HISTORY</h4>
+              <table class="live-history-table">
+                <thead><tr><th>Day</th><th>Tmax</th><th>WBGT</th><th>Risk</th><th>Score</th></tr></thead>
+                <tbody id="liveHistoryBody"><tr><td colspan="5">—</td></tr></tbody>
+              </table>
+            </div>
+
+            <div class="live-calc">
+              <h4>LIVE RISK CALCULATOR</h4>
+              <small>Uses today's real WBGT for the selected city, not the 2025 dataset</small>
+              <div class="live-calc-form">
+                <label>Age <select id="liveAge"><option value="22">22</option><option value="35">35</option><option value="50">50</option><option value="65" selected>65</option><option value="75">75</option></select></label>
+                <label>Occupation <select id="liveOccupation"><option>Student</option><option>Office Worker</option><option selected>Outdoor Worker</option><option>Construction Worker</option><option>Athlete</option></select></label>
+                <label>Activity <select id="liveActivity"><option>Low</option><option>Moderate</option><option selected>Heavy</option></select></label>
+                <label>Exposure <select id="liveExposure"><option value="1">1 Hour</option><option value="2">2 Hours</option><option value="4" selected>4 Hours</option><option value="6">6 Hours</option></select></label>
+              </div>
+              <button class="calculate live-calc-btn" id="liveCalculateBtn">Calculate Live Risk</button>
+              <div class="live-personal-risk">
+                <div><strong id="livePersonalScore">—</strong><span>/100</span></div>
+                <b class="risk-pill" id="livePersonalLabel"></b>
+              </div>
+            </div>
+          </div>
+
+          <label class="live-map-toggle-row">
+            <input type="checkbox" id="liveMapToggle"> Show live risk markers on the map above
+          </label>
         </div>
       </section>
     </main>
@@ -200,5 +246,6 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="data.js"></script>
   <script src="script.js"></script>
+  <script src="live-data.js"></script>
 </body>
 </html>
