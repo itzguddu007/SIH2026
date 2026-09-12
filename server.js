@@ -12,17 +12,21 @@ app.use(express.static(__dirname));
 
 const PORT = process.env.PORT || 3000;
 
-// Twilio client
-const client = twilio(
-    process.env.TWILIO_ACCOUNT_SID,
-    process.env.TWILIO_AUTH_TOKEN
-);
+// Twilio client (initialized safely so server can start even before env vars are set)
+let client = null;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    client = twilio(
+        process.env.TWILIO_ACCOUNT_SID,
+        process.env.TWILIO_AUTH_TOKEN
+    );
+}
 
-// Test route
-app.get("/", (req, res) => {
+// Health check route
+app.get("/api/health", (req, res) => {
     res.json({
         status: "online",
-        message: "SIH2026 Heatwave Alert Backend is running"
+        message: "SIH2026 Heatwave Alert Backend is running",
+        twilioConfigured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN)
     });
 });
 
@@ -30,6 +34,16 @@ app.get("/", (req, res) => {
 app.post("/api/send-alert", async (req, res) => {
 
     try {
+        if (!client) {
+            if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+                client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+            } else {
+                return res.status(500).json({
+                    success: false,
+                    message: "Twilio credentials are not configured in environment variables"
+                });
+            }
+        }
 
         const {
             city,

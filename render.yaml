@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sih2026-heatwave-alert
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_WHATSAPP_FROM
+        sync: false
+      - key: ALERT_TO_NUMBER
+        sync: false

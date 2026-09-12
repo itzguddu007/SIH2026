@@ -256,7 +256,7 @@ async function dispatchAlert(){
   try {
 
     const response = await fetch(
-      "https://YOUR-BACKEND-NAME.onrender.com/api/send-alert",
+      "/api/send-alert",
       {
         method: "POST",
         headers: {
